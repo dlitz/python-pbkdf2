@@ -52,7 +52,19 @@
 #  2007-07-27 Dwayne C. Litzenberger <dlitz@dlitz.net>
 #   - Initial Release (v1.0)
 #
+#  2007-07-31 Dwayne C. Litzenberger <dlitz@dlitz.net>
+#   - Bugfix release (v1.1)
+#   - SECURITY: The PyCrypto XOR cipher (used, if available, in the _strxor
+#   function in the previous release) silently truncates all keys to 64
+#   bytes.  The way it was used in the previous release, this would only be
+#   problem if the pseudorandom function that returned values larger than
+#   64 bytes (so SHA1, SHA256 and SHA512 are fine), but I don't like
+#   anything that silently reduces the security margin from what is
+#   expected.
+#
 ###########################################################################
+
+__version__ = "1.1"
 
 from struct import pack
 from binascii import b2a_hex
@@ -61,17 +73,15 @@ from random import randint
 
 try:
     # Use PyCrypto (if available)
-    from Crypto.Cipher import XOR
     from Crypto.Hash import HMAC, SHA as SHA1
 
-    def _strxor(a, b):
-        """XOR two equal-length byte strings"""
-        return XOR.new(a).encrypt(b)
 except ImportError:
     # PyCrypto not available.  Use the Python standard library.
-    from hmac import _strxor
     import hmac as HMAC
     import sha as SHA1
+
+def strxor(a, b):
+    return "".join([chr(ord(x) ^ ord(y)) for (x, y) in zip(a, b)])
 
 class PBKDF2(object):
     """PBKDF2.py : PKCS#5 v2.0 Password-Based Key Derivation
@@ -133,7 +143,7 @@ class PBKDF2(object):
         result = U
         for j in xrange(2, 1+self.__iterations):
             U = self.__prf(self.__passphrase, U)
-            result = _strxor(result, U)
+            result = strxor(result, U)
         return result
     
     def hexread(self, octets):
