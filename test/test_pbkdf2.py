@@ -2,12 +2,16 @@
 # -*- coding: ascii -*-
 
 import unittest
-from pbkdf2 import PBKDF2, crypt
+from pbkdf2 import PBKDF2, crypt, b
+
+import sys
 
 class TestPBKDF2(unittest.TestCase):
     def test_pbkdf2(self):
         """Module self-test"""
-        from binascii import a2b_hex
+        from binascii import a2b_hex as _a2b_hex
+        def a2b_hex(s):
+            return _a2b_hex(b(s))
 
         #
         # Test vectors from RFC 3962
@@ -70,7 +74,13 @@ class TestPBKDF2(unittest.TestCase):
         self.assertEqual(expected, result)
 
         # crypt 4 (unicode)
-        result = crypt(u'\u0399\u03c9\u03b1\u03bd\u03bd\u03b7\u03c2',
+        result = crypt(b('\xce\x99\xcf\x89\xce\xb1\xce\xbd\xce\xbd\xce\xb7\xcf\x82').decode('utf-8'),
+            '$p5k2$$KosHgqNo$9mjN8gqjt02hDoP0c2J0ABtLIwtot8cQ')
+        expected = '$p5k2$$KosHgqNo$9mjN8gqjt02hDoP0c2J0ABtLIwtot8cQ'
+        self.assertEqual(expected, result)
+
+        # crypt 5 (UTF-8 bytes)
+        result = crypt(b('\xce\x99\xcf\x89\xce\xb1\xce\xbd\xce\xbd\xce\xb7\xcf\x82'),
             '$p5k2$$KosHgqNo$9mjN8gqjt02hDoP0c2J0ABtLIwtot8cQ')
         expected = '$p5k2$$KosHgqNo$9mjN8gqjt02hDoP0c2J0ABtLIwtot8cQ'
         self.assertEqual(expected, result)
