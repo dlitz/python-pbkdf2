@@ -3,7 +3,7 @@
 ###########################################################################
 # PBKDF2.py - PKCS#5 v2.0 Password-Based Key Derivation
 #
-# Copyright (C) 2007 Dwayne C. Litzenberger <dlitz@dlitz.net>
+# Copyright (C) 2007, 2008 Dwayne C. Litzenberger <dlitz@dlitz.net>
 # All rights reserved.
 # 
 # Permission to use, copy, modify, and distribute this software and its
@@ -61,15 +61,19 @@
 #   64 bytes (so SHA1, SHA256 and SHA512 are fine), but I don't like
 #   anything that silently reduces the security margin from what is
 #   expected.
+#  
+# 2008-06-17 Dwayne C. Litzenberger <dlitz@dlitz.net>
+#   - Compatibility release (v1.2)
+#   - Add support for older versions of Python (2.2 and 2.3).
 #
 ###########################################################################
 
-__version__ = "1.1"
+__version__ = "1.2"
 
 from struct import pack
 from binascii import b2a_hex
-from base64 import b64encode
 from random import randint
+import string
 
 try:
     # Use PyCrypto (if available)
@@ -82,6 +86,10 @@ except ImportError:
 
 def strxor(a, b):
     return "".join([chr(ord(x) ^ ord(y)) for (x, y) in zip(a, b)])
+
+def b64encode(data, chars="+/"):
+    tt = string.maketrans("+/", chars)
+    return data.encode('base64').replace("\n", "").translate(tt)
 
 class PBKDF2(object):
     """PBKDF2.py : PKCS#5 v2.0 Password-Based Key Derivation
@@ -124,7 +132,7 @@ class PBKDF2(object):
         i = self.__blockNum
         while size < bytes:
             i += 1
-            if i > 0xffffffff:
+            if i > 0xffffffffL or i < 1:
                 # We could return "" here, but 
                 raise OverflowError("derived key too long")
             block = self.__f(i)
@@ -138,7 +146,7 @@ class PBKDF2(object):
     
     def __f(self, i):
         # i must fit within 32 bits
-        assert (1 <= i and i <= 0xffffffff)
+        assert 1 <= i <= 0xffffffffL
         U = self.__prf(self.__passphrase, self.__salt + pack("!L", i))
         result = U
         for j in xrange(2, 1+self.__iterations):
